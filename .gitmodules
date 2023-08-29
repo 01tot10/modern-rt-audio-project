@@ -1,5 +1,5 @@
 [submodule "Course"]
-	path = course
+	path = reference/course
 	url = https://github.com/Neural-DSP/modern-rt-audio-course
 [submodule "dependencies/JUCE"]
 	path = dependencies/JUCE
