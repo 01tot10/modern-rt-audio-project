@@ -7,3 +7,6 @@
 [submodule "reference/RTNeural"]
 	path = reference/RTNeural
 	url = git@github.com:jatinchowdhury18/RTNeural.git
+[submodule "reference/RTNeural-example"]
+	path = reference/RTNeural-example
+	url = git@github.com:jatinchowdhury18/RTNeural-example.git
