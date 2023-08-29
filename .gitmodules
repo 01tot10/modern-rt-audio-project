@@ -4,3 +4,6 @@
 [submodule "dependencies/JUCE"]
 	path = dependencies/JUCE
 	url = git@github.com:juce-framework/JUCE.git
+[submodule "reference/RTNeural"]
+	path = reference/RTNeural
+	url = git@github.com:jatinchowdhury18/RTNeural.git
