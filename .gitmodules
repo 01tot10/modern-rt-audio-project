@@ -2,7 +2,7 @@
 	path = reference/course
 	url = https://github.com/Neural-DSP/modern-rt-audio-course
 [submodule "dependencies/JUCE"]
-	path = dependencies/JUCE
+	path = modules/JUCE
 	url = git@github.com:juce-framework/JUCE.git
 [submodule "reference/RTNeural"]
 	path = reference/RTNeural
