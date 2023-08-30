@@ -15,3 +15,5 @@ function(create_example project_name)
 endfunction()
 
 add_subdirectory(hello_rtneural)
+add_subdirectory(torch_gru)
+add_subdirectory(torch_gru_chowtape)
