@@ -22,9 +22,9 @@ namespace Param
 
     namespace Range
     {
-        static constexpr float GainMin { -36.0f };
-        static constexpr float GainMax { -24.0f };
-        static constexpr float GainInc { .1f };
+        static constexpr float GainMin { -24.0f };
+        static constexpr float GainMax { 12.0f };
+        static constexpr float GainInc { 0.1f };
         static constexpr float GainSkw { 1.f };
     }
 }

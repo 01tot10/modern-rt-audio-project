@@ -3,7 +3,7 @@
 
 static const std::vector<mrta::ParameterInfo> parameters
 {
-    { Param::ID::Gain,  Param::Name::Gain,  Param::Unit::dB,  -36.0f,  Param::Range::GainMin,  Param::Range::GainMax,  Param::Range::GainInc,  Param::Range::GainSkw }
+    { Param::ID::Gain,  Param::Name::Gain,  Param::Unit::dB,  -0.0f,  Param::Range::GainMin,  Param::Range::GainMax,  Param::Range::GainInc,  Param::Range::GainSkw }
 };
 
 //==============================================================================
@@ -24,7 +24,7 @@ RTNeuralExamplePlugin::RTNeuralExamplePlugin() :
     parameterManager.registerParameterCallback(Param::ID::Gain,
     [this] (float value, bool /*force*/)
     {
-        inputGain.setGainDecibels (value + 25.0f);
+        inputGain.setGainDecibels (value);
     });
 
     MemoryInputStream jsonStream (BinaryData::gru_torch_chowtape_json, BinaryData::gru_torch_chowtape_jsonSize, false);
@@ -187,7 +187,7 @@ bool RTNeuralExamplePlugin::hasEditor() const
 
 AudioProcessorEditor* RTNeuralExamplePlugin::createEditor()
 {
-    return new GenericAudioProcessorEditor (*this);
+    return new RTNeuralExamplePluginEditor (*this);
 }
 
 //==============================================================================
