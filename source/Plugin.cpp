@@ -14,20 +14,33 @@ RTNeuralExamplePlugin::RTNeuralExamplePlugin() :
 #endif
     parameters (*this, nullptr, Identifier ("Parameters"),
     {
-        std::make_unique<AudioParameterFloat> ("gain_db", "Gain [dB]", -12.0f, 12.0f, 0.0f),
+        std::make_unique<AudioParameterFloat> ("gain_db", "Gain [dB]", -36.0f, 0.0f, -36.0f),
         std::make_unique<AudioParameterChoice> ("model_type", "Model Type", StringArray { "Run-Time", "Compile-Time" }, 0)
     })
 {
     inGainDbParam = parameters.getRawParameterValue ("gain_db");
     modelTypeParam = parameters.getRawParameterValue ("model_type");
 
-    MemoryInputStream jsonStream (BinaryData::neural_net_weights_json, BinaryData::neural_net_weights_jsonSize, false);
+    MemoryInputStream jsonStream (BinaryData::gru_torch_chowtape_json, BinaryData::gru_torch_chowtape_jsonSize, false);
     auto jsonInput = nlohmann::json::parse (jsonStream.readEntireStreamAsString().toStdString());
-    neuralNet[0] = RTNeural::json_parser::parseJson<float> (jsonInput);
-    neuralNet[1] = RTNeural::json_parser::parseJson<float> (jsonInput);
 
-    neuralNetT[0].parseJson (jsonInput);
-    neuralNetT[1].parseJson (jsonInput);
+    // Left
+    {
+        auto& gru = neuralNetT[0].get<0>();
+        RTNeural::torch_helpers::loadGRU<float> (jsonInput, "gru.", gru);
+
+        auto& dense = neuralNetT[0].get<1>();
+        RTNeural::torch_helpers::loadDense<float> (jsonInput, "dense.", dense);
+    }
+
+    // Right
+    {
+        auto& gru = neuralNetT[1].get<0>();
+        RTNeural::torch_helpers::loadGRU<float> (jsonInput, "gru.", gru);
+
+        auto& dense = neuralNetT[1].get<1>();
+        RTNeural::torch_helpers::loadDense<float> (jsonInput, "dense.", dense);
+    }
 }
 
 RTNeuralExamplePlugin::~RTNeuralExamplePlugin()
@@ -106,9 +119,6 @@ void RTNeuralExamplePlugin::prepareToPlay (double sampleRate, int samplesPerBloc
     inputGain.setRampDurationSeconds (0.05);
     dcBlocker.prepare (spec);
 
-    neuralNet[0]->reset();
-    neuralNet[1]->reset();
-
     neuralNetT[0].reset();
     neuralNetT[1].reset();
 }
@@ -144,30 +154,14 @@ void RTNeuralExamplePlugin::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     inputGain.setGainDecibels (inGainDbParam->load() + 25.0f);
     inputGain.process (context);
 
-    if (static_cast<int> (modelTypeParam->load()) == 0)
+    // use compile-time model
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
     {
-        // use run-time model
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+        auto* x = buffer.getWritePointer (ch);
+        for (int n = 0; n < buffer.getNumSamples(); ++n)
         {
-            auto* x = buffer.getWritePointer (ch);
-            for (int n = 0; n < buffer.getNumSamples(); ++n)
-            {
-                float input[] = { x[n] };
-                x[n] = neuralNet[ch]->forward (input);
-            }
-        }
-    }
-    else
-    {
-        // use compile-time model
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-        {
-            auto* x = buffer.getWritePointer (ch);
-            for (int n = 0; n < buffer.getNumSamples(); ++n)
-            {
-                float input[] = { x[n] };
-                x[n] = neuralNetT[ch].forward (input);
-            }
+            float input[] = { x[n] };
+            x[n] = neuralNetT[ch].forward (input);
         }
     }
 

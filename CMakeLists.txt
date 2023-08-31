@@ -30,6 +30,8 @@ target_sources(ModernRTAudioProject PRIVATE
 # Add binaries
 juce_add_binary_data(BinaryData SOURCES
     weights/neural_net_weights.json
+    weights/gru_torch.json
+    weights/gru_torch_chowtape.json
 )
 set_target_properties(BinaryData PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE)
