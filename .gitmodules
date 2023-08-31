@@ -10,3 +10,6 @@
 [submodule "reference/RTNeural-example"]
 	path = reference/RTNeural-example
 	url = git@github.com:jatinchowdhury18/RTNeural-example.git
+[submodule "reference/4000DB-NeuralAmp"]
+	path = reference/4000DB-NeuralAmp
+	url = git@github.com:EnrcDamn/4000DB-NeuralAmp.git
