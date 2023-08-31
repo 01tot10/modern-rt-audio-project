@@ -21,10 +21,12 @@ juce_add_plugin(ModernRTAudioProject
     COPY_PLUGIN_AFTER_BUILD TRUE
 )
 juce_generate_juce_header(ModernRTAudioProject)
+juce_add_module(modules/mrta_utils)
 
 # Add sources
 target_sources(ModernRTAudioProject PRIVATE
     source/Plugin.cpp
+    source/PluginEditor.cpp
 )
 
 # Add binaries
@@ -61,4 +63,5 @@ target_link_libraries(ModernRTAudioProject
     juce::juce_audio_utils
     juce::juce_dsp
     RTNeural
+    mrta_utils
 )

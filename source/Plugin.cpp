@@ -1,4 +1,10 @@
 #include "Plugin.h"
+#include "PluginEditor.h"
+
+static const std::vector<mrta::ParameterInfo> parameters
+{
+    { Param::ID::Gain,  Param::Name::Gain,  Param::Unit::dB,  -36.0f,  Param::Range::GainMin,  Param::Range::GainMax,  Param::Range::GainInc,  Param::Range::GainSkw }
+};
 
 //==============================================================================
 RTNeuralExamplePlugin::RTNeuralExamplePlugin() :
@@ -12,14 +18,14 @@ RTNeuralExamplePlugin::RTNeuralExamplePlugin() :
     AudioProcessor (BusesProperties().withInput ("Input", juce::AudioChannelSet::stereo(), true)
                                      .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
 #endif
-    parameters (*this, nullptr, Identifier ("Parameters"),
-    {
-        std::make_unique<AudioParameterFloat> ("gain_db", "Gain [dB]", -36.0f, 0.0f, -36.0f),
-        std::make_unique<AudioParameterChoice> ("model_type", "Model Type", StringArray { "Run-Time", "Compile-Time" }, 0)
-    })
+    parameterManager(*this, ProjectInfo::projectName, parameters)
 {
-    inGainDbParam = parameters.getRawParameterValue ("gain_db");
-    modelTypeParam = parameters.getRawParameterValue ("model_type");
+
+    parameterManager.registerParameterCallback(Param::ID::Gain,
+    [this] (float value, bool /*force*/)
+    {
+        inputGain.setGainDecibels (value + 25.0f);
+    });
 
     MemoryInputStream jsonStream (BinaryData::gru_torch_chowtape_json, BinaryData::gru_torch_chowtape_jsonSize, false);
     auto jsonInput = nlohmann::json::parse (jsonStream.readEntireStreamAsString().toStdString());
@@ -121,6 +127,8 @@ void RTNeuralExamplePlugin::prepareToPlay (double sampleRate, int samplesPerBloc
 
     neuralNetT[0].reset();
     neuralNetT[1].reset();
+
+    parameterManager.updateParameters(true);
 }
 
 void RTNeuralExamplePlugin::releaseResources()
@@ -147,11 +155,11 @@ bool RTNeuralExamplePlugin::isBusesLayoutSupported (const BusesLayout& layouts) 
 void RTNeuralExamplePlugin::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages)
 {
     ScopedNoDenormals noDenormals;
+    parameterManager.updateParameters();
 
     dsp::AudioBlock<float> block (buffer);
     dsp::ProcessContextReplacing<float> context (block);
 
-    inputGain.setGainDecibels (inGainDbParam->load() + 25.0f);
     inputGain.process (context);
 
     // use compile-time model
@@ -185,18 +193,12 @@ AudioProcessorEditor* RTNeuralExamplePlugin::createEditor()
 //==============================================================================
 void RTNeuralExamplePlugin::getStateInformation (MemoryBlock& destData)
 {
-    auto state = parameters.copyState();
-    std::unique_ptr<XmlElement> xml (state.createXml());
-    copyXmlToBinary (*xml, destData);
+    parameterManager.getStateInformation(destData);
 }
 
 void RTNeuralExamplePlugin::setStateInformation (const void* data, int sizeInBytes)
 {
-    std::unique_ptr<XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
- 
-    if (xmlState.get() != nullptr)
-        if (xmlState->hasTagName (parameters.state.getType()))
-            parameters.replaceState (ValueTree::fromXml (*xmlState));
+    parameterManager.setStateInformation(data, sizeInBytes);
 }
 
 //==============================================================================

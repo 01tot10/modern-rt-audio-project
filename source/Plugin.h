@@ -3,6 +3,32 @@
 #include <JuceHeader.h>
 #include <RTNeural/RTNeural.h>
 
+namespace Param
+{
+    namespace ID
+    {
+        static const juce::String Gain { "gain" };
+    }
+
+    namespace Name
+    {
+        static const juce::String Gain { "Gain" };
+    }
+
+    namespace Unit
+    {
+        static const juce::String dB { "dB" };
+    }
+
+    namespace Range
+    {
+        static constexpr float GainMin { -36.0f };
+        static constexpr float GainMax { -24.0f };
+        static constexpr float GainInc { .1f };
+        static constexpr float GainSkw { 1.f };
+    }
+}
+
 class RTNeuralExamplePlugin  : public AudioProcessor
 {
 public:
@@ -15,6 +41,9 @@ public:
     void releaseResources() override;
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
     void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
+
+    //==============================================================================
+    mrta::ParameterManager& getParameterManager() { return parameterManager; }
 
     //==============================================================================
     AudioProcessorEditor* createEditor() override;
@@ -41,16 +70,12 @@ public:
 
 private:
     //==============================================================================
-    AudioProcessorValueTreeState parameters;
+    mrta::ParameterManager parameterManager;
 
     // input gain
-    std::atomic<float>* inGainDbParam = nullptr;
     dsp::Gain<float> inputGain;
-    
-    // models
-    std::atomic<float>* modelTypeParam = nullptr;
 
-    // Model defined at compile-time
+    // neural network
     RTNeural::ModelT<float, 1, 1,
         RTNeural::GRULayerT<float, 1, 64>,
         RTNeural::DenseT<float, 64, 1>
