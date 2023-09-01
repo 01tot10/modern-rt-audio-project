@@ -7,7 +7,10 @@ set(CMAKE_CXX_STANDARD 17)
 # Include modules
 add_subdirectory(modules/JUCE)
 add_subdirectory(RTNeural)
-include_directories(RTNeural)
+include_directories(
+    RTNeural
+    dsp
+)
 
 # Set RT Settings
 include(cmake/ChooseBackend.cmake)
@@ -27,6 +30,8 @@ juce_add_module(modules/mrta_utils)
 target_sources(ModernRTAudioProject PRIVATE
     source/Plugin.cpp
     source/PluginEditor.cpp
+    dsp/DelayLine.cpp
+    dsp/LFODelayLine.cpp
 )
 
 # Add binaries

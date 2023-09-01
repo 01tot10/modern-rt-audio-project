@@ -1,9 +1,15 @@
 #include "Plugin.h"
 #include "PluginEditor.h"
 
+#include <algorithm>
+
 static const std::vector<mrta::ParameterInfo> parameters
 {
-    { Param::ID::Gain,  Param::Name::Gain,  Param::Unit::dB,  -0.0f,  Param::Range::GainMin,  Param::Range::GainMax,  Param::Range::GainInc,  Param::Range::GainSkw }
+    { Param::ID::Enabled,  Param::Name::Enabled,  Param::Range::EnabledOff, Param::Range::EnabledOn, true },
+    { Param::ID::Gain,  Param::Name::Gain,  Param::Unit::dB,  -0.0f,  Param::Range::GainMin,  Param::Range::GainMax,  Param::Range::GainInc,  Param::Range::GainSkw },
+    { Param::ID::Offset,   Param::Name::Offset,   Param::Unit::Ms,  12.5f,  Param::Range::OffsetMin,   Param::Range::OffsetMax,   Param::Range::OffsetInc,   Param::Range::OffsetSkw },
+    { Param::ID::Depth,    Param::Name::Depth,    Param::Unit::Ms,  0.f,  Param::Range::DepthMin,    Param::Range::DepthMax,    Param::Range::DepthInc,    Param::Range::DepthSkw },
+    { Param::ID::Rate,     Param::Name::Rate,     Param::Unit::Hz,  0.5f, Param::Range::RateMin,     Param::Range::RateMax,     Param::Range::RateInc,     Param::Range::RateSkw }
 };
 
 //==============================================================================
@@ -18,13 +24,40 @@ RTNeuralExamplePlugin::RTNeuralExamplePlugin() :
     AudioProcessor (BusesProperties().withInput ("Input", juce::AudioChannelSet::stereo(), true)
                                      .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
 #endif
-    parameterManager(*this, ProjectInfo::projectName, parameters)
+    parameterManager(*this, ProjectInfo::projectName, parameters),
+    lfoDelayLine(50.f, 2),
+    enableRamp(0.05f)
 {
+
+    parameterManager.registerParameterCallback(Param::ID::Enabled,
+    [this](float newValue, bool force)
+    {
+        enableRamp.setTarget(std::fmin(std::fmax(newValue, 0.f), 1.f), force);
+    });
 
     parameterManager.registerParameterCallback(Param::ID::Gain,
     [this] (float value, bool /*force*/)
     {
         inputGain.setGainDecibels (value);
+    });
+
+    parameterManager.registerParameterCallback(Param::ID::Offset,
+    [this] (float newValue, bool /*force*/)
+    {
+        lfoDelayLine.setOffset(newValue);
+    });
+
+    
+    parameterManager.registerParameterCallback(Param::ID::Depth,
+    [this](float newValue, bool /*force*/)
+    {
+        lfoDelayLine.setDepth(newValue);
+    });
+    
+    parameterManager.registerParameterCallback(Param::ID::Rate,
+    [this] (float newValue, bool /*force*/)
+    {
+        lfoDelayLine.setModulationRate(newValue);
     });
 
     MemoryInputStream jsonStream (BinaryData::gru_torch_chowtape_json, BinaryData::gru_torch_chowtape_jsonSize, false);
@@ -125,6 +158,13 @@ void RTNeuralExamplePlugin::prepareToPlay (double sampleRate, int samplesPerBloc
     inputGain.setRampDurationSeconds (0.05);
     dcBlocker.prepare (spec);
 
+    const unsigned int numChannels { static_cast<unsigned int>(std::max(getMainBusNumInputChannels(), getMainBusNumOutputChannels())) };
+    lfoDelayLine.prepare(sampleRate, 20.f, numChannels);
+    enableRamp.prepare(sampleRate);
+
+    fxBuffer.setSize(static_cast<int>(numChannels), samplesPerBlock);
+    fxBuffer.clear();
+
     neuralNetT[0].reset();
     neuralNetT[1].reset();
 
@@ -133,8 +173,7 @@ void RTNeuralExamplePlugin::prepareToPlay (double sampleRate, int samplesPerBloc
 
 void RTNeuralExamplePlugin::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
+    lfoDelayLine.clear();
 }
 
 bool RTNeuralExamplePlugin::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -157,24 +196,36 @@ void RTNeuralExamplePlugin::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     ScopedNoDenormals noDenormals;
     parameterManager.updateParameters();
 
+    const unsigned int numChannels { static_cast<unsigned int>(buffer.getNumChannels()) };
+    const unsigned int numSamples { static_cast<unsigned int>(buffer.getNumSamples()) };
+
     dsp::AudioBlock<float> block (buffer);
     dsp::ProcessContextReplacing<float> context (block);
 
     inputGain.process (context);
 
     // use compile-time model
-    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-    {
-        auto* x = buffer.getWritePointer (ch);
-        for (int n = 0; n < buffer.getNumSamples(); ++n)
-        {
-            float input[] = { x[n] };
-            x[n] = neuralNetT[ch].forward (input);
-        }
-    }
+    // for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    // {
+    //     auto* x = buffer.getWritePointer (ch);
+    //     for (int n = 0; n < buffer.getNumSamples(); ++n)
+    //     {
+    //         float input[] = { x[n] };
+    //         x[n] = neuralNetT[ch].forward (input);
+    //     }
+    // }
+    // buffer.applyGain (5.0f);
 
     dcBlocker.process (context);
-    buffer.applyGain (5.0f);
+
+    for (int ch = 0; ch < static_cast<int>(numChannels); ++ch)
+        fxBuffer.copyFrom(ch, 0, buffer, ch, 0, static_cast<int>(numSamples));
+
+    lfoDelayLine.process(fxBuffer.getArrayOfWritePointers(), fxBuffer.getArrayOfReadPointers(), numChannels, numSamples);
+    enableRamp.applyGain(fxBuffer.getArrayOfWritePointers(), numChannels, numSamples);
+
+    for (int ch = 0; ch < static_cast<int>(numChannels); ++ch)
+        buffer.copyFrom(ch, 0, fxBuffer, ch, 0, static_cast<int>(numSamples));
 
     ignoreUnused (midiMessages);
 }

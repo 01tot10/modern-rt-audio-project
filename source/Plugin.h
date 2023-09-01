@@ -2,22 +2,34 @@
 
 #include <JuceHeader.h>
 #include <RTNeural/RTNeural.h>
+#include "LFODelayLine.h"
 
 namespace Param
 {
     namespace ID
     {
         static const juce::String Gain { "gain" };
+        static const juce::String Enabled { "enabled" };
+        static const juce::String Offset { "offset" };
+        static const juce::String Depth { "depth" };
+        static const juce::String Rate { "rate" };
     }
 
     namespace Name
     {
         static const juce::String Gain { "Gain" };
+        static const juce::String Enabled { "Enabled" };
+        static const juce::String Offset { "Offset" };
+        static const juce::String Depth { "Depth" };
+        static const juce::String Rate { "Rate" };
     }
 
     namespace Unit
     {
         static const juce::String dB { "dB" };
+        static const juce::String Ms { "ms" };
+        static const juce::String Hz { "Hz" };
+        static const juce::String Pct { "%" };
     }
 
     namespace Range
@@ -26,6 +38,24 @@ namespace Param
         static constexpr float GainMax { 12.0f };
         static constexpr float GainInc { 0.1f };
         static constexpr float GainSkw { 1.f };
+
+        static constexpr float OffsetMin { 1.f };
+        static constexpr float OffsetMax { 25.f };
+        static constexpr float OffsetInc { 0.1f };
+        static constexpr float OffsetSkw { 0.5f };
+
+        static constexpr float DepthMin { 0.f };
+        static constexpr float DepthMax { 25.f };
+        static constexpr float DepthInc { 0.1f };
+        static constexpr float DepthSkw { 0.7f };
+    
+        static constexpr float RateMin { 0.1f };
+        static constexpr float RateMax { 5.f };
+        static constexpr float RateInc { 0.1f };
+        static constexpr float RateSkw { 0.5f };
+
+        static const juce::String EnabledOff { "Off" };
+        static const juce::String EnabledOn { "On" };
     }
 }
 
@@ -38,9 +68,13 @@ public:
 
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+    void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
     void releaseResources() override;
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-    void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
+
+    //==============================================================================
+    void getStateInformation (MemoryBlock& destData) override;
+    void setStateInformation (const void* data, int sizeInBytes) override;
 
     //==============================================================================
     mrta::ParameterManager& getParameterManager() { return parameterManager; }
@@ -64,9 +98,9 @@ public:
     const String getProgramName (int index) override;
     void changeProgramName (int index, const String& newName) override;
 
-    //==============================================================================
-    void getStateInformation (MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
+    static const unsigned int MaxDelaySizeSamples { 1 << 12 };
+    static const unsigned int MaxChannels { 2 };
+    static const unsigned int MaxProcessBlockSamples{ 32 };
 
 private:
     //==============================================================================
@@ -80,6 +114,11 @@ private:
         RTNeural::GRULayerT<float, 1, 64>,
         RTNeural::DenseT<float, 64, 1>
     > neuralNetT[2];
+
+    // delay
+    mrta::LFODelayLine lfoDelayLine;
+    mrta::Ramp<float> enableRamp;
+    juce::AudioBuffer<float> fxBuffer;
 
     dsp::ProcessorDuplicator<dsp::IIR::Filter<float>, dsp::IIR::Coefficients<float>> dcBlocker;
 
