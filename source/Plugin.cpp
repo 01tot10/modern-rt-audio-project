@@ -199,25 +199,7 @@ void RTNeuralExamplePlugin::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     const unsigned int numChannels { static_cast<unsigned int>(buffer.getNumChannels()) };
     const unsigned int numSamples { static_cast<unsigned int>(buffer.getNumSamples()) };
 
-    dsp::AudioBlock<float> block (buffer);
-    dsp::ProcessContextReplacing<float> context (block);
-
-    inputGain.process (context);
-
-    // use compile-time model
-    // for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-    // {
-    //     auto* x = buffer.getWritePointer (ch);
-    //     for (int n = 0; n < buffer.getNumSamples(); ++n)
-    //     {
-    //         float input[] = { x[n] };
-    //         x[n] = neuralNetT[ch].forward (input);
-    //     }
-    // }
-    // buffer.applyGain (5.0f);
-
-    dcBlocker.process (context);
-
+    // Delay
     for (int ch = 0; ch < static_cast<int>(numChannels); ++ch)
         fxBuffer.copyFrom(ch, 0, buffer, ch, 0, static_cast<int>(numSamples));
 
@@ -226,6 +208,24 @@ void RTNeuralExamplePlugin::processBlock (AudioBuffer<float>& buffer, MidiBuffer
 
     for (int ch = 0; ch < static_cast<int>(numChannels); ++ch)
         buffer.copyFrom(ch, 0, fxBuffer, ch, 0, static_cast<int>(numSamples));
+
+    // Neural network
+    dsp::AudioBlock<float> block (buffer);
+    dsp::ProcessContextReplacing<float> context (block);
+
+    inputGain.process (context);
+    // use compile-time model
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        auto* x = buffer.getWritePointer (ch);
+        for (int n = 0; n < buffer.getNumSamples(); ++n)
+        {
+            float input[] = { x[n] };
+            x[n] = neuralNetT[ch].forward (input);
+        }
+    }
+    buffer.applyGain (5.0f);
+    dcBlocker.process (context);
 
     ignoreUnused (midiMessages);
 }
