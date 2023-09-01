@@ -40,7 +40,7 @@ namespace Param
         static constexpr float GainSkw { 1.f };
 
         static constexpr float OffsetMin { 1.f };
-        static constexpr float OffsetMax { 25.f };
+        static constexpr float OffsetMax { 50.f };
         static constexpr float OffsetInc { 0.1f };
         static constexpr float OffsetSkw { 0.5f };
 
@@ -98,7 +98,7 @@ public:
     const String getProgramName (int index) override;
     void changeProgramName (int index, const String& newName) override;
 
-    static const unsigned int MaxDelaySizeSamples { 1 << 12 };
+    // static const unsigned int MaxDelaySizeSamples { 1 << 12 };
     static const unsigned int MaxChannels { 2 };
     static const unsigned int MaxProcessBlockSamples{ 32 };
 

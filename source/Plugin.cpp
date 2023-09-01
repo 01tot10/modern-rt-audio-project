@@ -7,9 +7,9 @@ static const std::vector<mrta::ParameterInfo> parameters
 {
     { Param::ID::Enabled,  Param::Name::Enabled,  Param::Range::EnabledOff, Param::Range::EnabledOn, true },
     { Param::ID::Gain,  Param::Name::Gain,  Param::Unit::dB,  -0.0f,  Param::Range::GainMin,  Param::Range::GainMax,  Param::Range::GainInc,  Param::Range::GainSkw },
-    { Param::ID::Offset,   Param::Name::Offset,   Param::Unit::Ms,  12.5f,  Param::Range::OffsetMin,   Param::Range::OffsetMax,   Param::Range::OffsetInc,   Param::Range::OffsetSkw },
-    { Param::ID::Depth,    Param::Name::Depth,    Param::Unit::Ms,  0.f,  Param::Range::DepthMin,    Param::Range::DepthMax,    Param::Range::DepthInc,    Param::Range::DepthSkw },
-    { Param::ID::Rate,     Param::Name::Rate,     Param::Unit::Hz,  0.5f, Param::Range::RateMin,     Param::Range::RateMax,     Param::Range::RateInc,     Param::Range::RateSkw }
+    { Param::ID::Offset,   Param::Name::Offset,   Param::Unit::Ms,  20.f,  Param::Range::OffsetMin,   Param::Range::OffsetMax,   Param::Range::OffsetInc,   Param::Range::OffsetSkw },
+    { Param::ID::Depth,    Param::Name::Depth,    Param::Unit::Ms,  20.f,  Param::Range::DepthMin,    Param::Range::DepthMax,    Param::Range::DepthInc,    Param::Range::DepthSkw },
+    { Param::ID::Rate,     Param::Name::Rate,     Param::Unit::Hz,  2.0f, Param::Range::RateMin,     Param::Range::RateMax,     Param::Range::RateInc,     Param::Range::RateSkw }
 };
 
 //==============================================================================
@@ -25,7 +25,7 @@ RTNeuralExamplePlugin::RTNeuralExamplePlugin() :
                                      .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
 #endif
     parameterManager(*this, ProjectInfo::projectName, parameters),
-    lfoDelayLine(50.f, 2),
+    lfoDelayLine(100.f, 2),
     enableRamp(0.05f)
 {
 
@@ -159,7 +159,7 @@ void RTNeuralExamplePlugin::prepareToPlay (double sampleRate, int samplesPerBloc
     dcBlocker.prepare (spec);
 
     const unsigned int numChannels { static_cast<unsigned int>(std::max(getMainBusNumInputChannels(), getMainBusNumOutputChannels())) };
-    lfoDelayLine.prepare(sampleRate, 20.f, numChannels);
+    lfoDelayLine.prepare(sampleRate, 100.f, numChannels);
     enableRamp.prepare(sampleRate);
 
     fxBuffer.setSize(static_cast<int>(numChannels), samplesPerBlock);
